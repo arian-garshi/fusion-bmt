@@ -6,7 +6,7 @@ import FollowUpIndicator from '../../../../components/FollowUpIndicator'
 import { noProjectMasterTitle } from '../../../../utils/hooks'
 import styled from 'styled-components'
 import { ApolloQueryResult } from '@apollo/client'
-import { Evaluation } from '../../../../api/models'
+import { Evaluation, Progression } from '../../../../api/models'
 import React from 'react'
 import { ProjectBMTScore, ProjectIndicator } from '../../../../utils/helperModels'
 
@@ -45,36 +45,35 @@ const TablesAndTitles = ({
                     let activityDate = ""
                     let projectId = ""
                     let followUpScore = null
-                    Object.entries(evaluations).map((info) => {
 
-                        if (info[1].projectId !== projectId) {
-                            projectId = info[1].projectId
+                    Object.entries(evaluations).forEach((evaluation) => {
+                        const evalData = evaluation[1]
+                        if (evalData.projectId !== projectId) {
+                            projectId = evalData.projectId
                         }
 
-                        if (projectIndicators.findIndex(pi => pi.evaluationId === info[1].project.indicatorEvaluationId) > -1) {
-                            if (info[1].indicatorActivityDate) {
-                                activityDate = info[1].indicatorActivityDate
-                            }
-                        }
-                        else if (info[1].project.indicatorEvaluationId === info[1].id) {
-                            if (info[1].indicatorActivityDate) {
-                                activityDate = info[1].indicatorActivityDate
+                        const isFollowUp = evalData.progression === Progression.FollowUp
+                        const isIndicatorEvaluation = evalData.project.indicatorEvaluationId === evalData.id
+                        const isProjectIndicator = projectIndicators.findIndex(pi => pi.evaluationId === evalData.id) > -1
+
+                        if ((isProjectIndicator || isIndicatorEvaluation) && isFollowUp) {
+                            if (evalData.indicatorActivityDate) {
+                                activityDate = evalData.indicatorActivityDate
+                            } else if (evalData.workshopCompleteDate) {
+                                activityDate = evalData.workshopCompleteDate
                             }
                         }
                     })
                     if (projectBMTScores.length > 0) {
-                        projectBMTScores.forEach((score: any, index: any) => {
-                            if (score.projectId === projectId) {
-                                followUpScore = score.bmtScore
-                            }
-                        })
-                    }
-                    else if (generatedBMTScores) {
-                        generatedBMTScores.generateBMTScores.forEach((score: any, index: any) => {
-                            if (score.projectId === projectId) {
-                                followUpScore = score.followUpScore
-                            }
-                        })
+                        const score = projectBMTScores.find((score: any) => score.projectId === projectId)
+                        if (score) {
+                            followUpScore = score.bmtScore
+                        }
+                    } else if (generatedBMTScores) {
+                        const score = generatedBMTScores.generateBMTScores.find((score: any) => score.projectId === projectId)
+                        if (score) {
+                            followUpScore = score.followUpScore
+                        }
                     }
 
                     return (
